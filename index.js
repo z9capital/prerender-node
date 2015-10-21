@@ -59,6 +59,22 @@ prerender.crawlerUserAgents = [
   'Applebot'
 ];
 
+/**
+ * Retry request if statusCode equals to one of below
+ */
+prerender.notAcceptableCodes = [504, 200];
+/**
+ * Whether retries enabled
+ */
+prerender.retries_enabled = false;
+/**
+ * Number of retries
+ */
+prerender.retries = 3;
+/**
+ * Whether need to log retries
+ */
+prerender.retries_log_enabled = false;
 
 prerender.extensionsToIgnore = [
   '.js',
@@ -168,16 +184,32 @@ prerender.getPrerenderedPageResponse = function(req, callback) {
   if(this.prerenderToken || process.env.PRERENDER_TOKEN) {
     options.headers['X-Prerender-Token'] = this.prerenderToken || process.env.PRERENDER_TOKEN;
   }
+  var current_try = 0;
+  function doRetry(options) {
+    current_try++;
+    request.get(options)
+        .on('response', function (response) {
+          if (prerender.retries_log_enabled) {
+            console.log('PRERENDER: ' + current_try + ' try ' + response.statusCode + ' for: ' + options.uri.pathname);
+          }
 
-  request.get(options).on('response', function(response) {
-    if(response.headers['content-encoding'] && response.headers['content-encoding'] === 'gzip') {
-      prerender.gunzipResponse(response, callback);
-    } else {
-      prerender.plainResponse(response, callback);
-    }
-  }).on('error', function(err) {
-    callback(err);
-  });
+          var retry = prerender.notAcceptableCodes.indexOf(response.statusCode) >= 0;
+          if (prerender.retries_enabled && (current_try < prerender.retries) && retry) {
+            doRetry(options);
+          } else {
+            if (response.headers['content-encoding'] && response.headers['content-encoding'] === 'gzip') {
+              prerender.gunzipResponse(response, callback);
+            } else {
+              prerender.plainResponse(response, callback);
+            }
+          }
+        })
+        .on('error', function (err) {
+          callback(err);
+        });
+  }
+
+  doRetry(options);
 };
 
 prerender.gunzipResponse = function(response, callback) {
