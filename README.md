@@ -99,6 +99,17 @@ Option to hard-set the protocol. Useful for sites that are available on both htt
 app.use(require('prerender-node').set('protocol', 'https'));
 ```
 
+### retry
+
+Option to enabled 'retry' functionality based on response status code from ```prerender.notAcceptableCodes``` array.
+```js
+app.use(require('prerender-node')
+	.set('retries_enabled', true)
+	.set('retries_log_enabled', true)
+	.set('retries', 3)
+);
+```
+
 ## Caching
 
 This express middleware is ready to be used with [redis](http://redis.io/) or [memcached](http://memcached.org/) to return prerendered pages in milliseconds.

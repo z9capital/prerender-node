@@ -62,7 +62,7 @@ prerender.crawlerUserAgents = [
 /**
  * Retry request if statusCode equals to one of below
  */
-prerender.notAcceptableCodes = [504, 200];
+prerender.notAcceptableCodes = [504];
 /**
  * Whether retries enabled
  */
